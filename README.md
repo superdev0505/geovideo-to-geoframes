@@ -18,21 +18,49 @@ Geovideo to Geoframes is the result.
 
 ## How it works
 
-1. 
+1. You specify the geotagged video and the framerate (frames per second) to be extracted
+2. The script will extract the metadata of the video
+3. The script will use ffmpeg to split the video into frames at specified frame rate
+4. The script will embed a `captureTime` to each frame using the first `GPSDateTime` and using the specified framerate to offset time value (e.g first frame = earliest `GPSDateTime`, second frame = earliest `GPSDateTime` + frame rate, ...)
+5. The script will embed global metadata to each frame (e.g. camera make and model)
+6. The script will geotag each frame with GPS co-ordinate (latitude, longitude, and altitude)
 
-## Requirements
+### OS Requirements
 
-TODO
+Works on Windows, Linux and MacOS.
 
 ### Software Requirements
 
-TODO
+* Python version 3.6+
+* [exiftool](https://exiftool.org/)
+* [ffmpeg](https://www.ffmpeg.org/download.html)
 
 ### Video Requirements
 
-TODO
+* Must be a video format understood by ffmpeg and exiftool
+* Must be [XMP] ProjectionType=equirectangular
+* Must have contain a telemetry track with GPS data
+	- `GPSLatitude`
+	- `GPSLongitude`
+	- `GPSAltitude`
+	- `GPSDateTime`
+
+## More on metadata tracks in video (for developers)
+
+Telemetry data is reported as a track in a video file.
+
+[I recommend reading more about metadata tracks here](https://www.trekview.org/blog/2020/metadata-exif-xmp-360-video-files/).
 
 ## Quick start guide
+
+```
+python gf2gv.py VIDEO_FILE FRAME_RATE OUTPUT_FRAME_DIRECTORY
+```
+
+```
+python gf2gv.py VIDEO_0294.mp4 1 my_video_frames/
+```
+
 
 TODO
 
@@ -42,4 +70,4 @@ We offer community support for all our software on our Campfire forum. [Ask a qu
 
 ## License
 
-Geovideo to Geoframes is licensed under an [GNU AGPLv3 License](https://github.com/trek-view/geovideo-to-geoframes/blob/master/LICENSE.txt).
+Geovideo to Geoframes is licensed under a [GNU AGPLv3 License](https://github.com/trek-view/geovideo-to-geoframes/blob/master/LICENSE.txt).
