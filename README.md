@@ -42,4 +42,4 @@ We offer community support for all our software on our Campfire forum. [Ask a qu
 
 ## License
 
-Geovideo to Geoframes is licensed under an [MIT License](https://github.com/trek-view/geovideo-to-geoframes/blob/master/LICENSE.txt).
+Geovideo to Geoframes is licensed under an [GNU AGPLv3 License](https://github.com/trek-view/geovideo-to-geoframes/blob/master/LICENSE.txt).
