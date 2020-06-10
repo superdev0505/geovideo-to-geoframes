@@ -21,9 +21,17 @@ Geovideo to Geoframes is the result.
 1. You specify the geotagged video and the framerate (frames per second) to be extracted
 2. The script will extract the metadata of the video
 3. The script will use ffmpeg to split the video into frames at specified frame rate
-4. The script will embed a `captureTime` to each frame using the first `GPSDateTime` and using the specified framerate to offset time value (e.g first frame = earliest `GPSDateTime`, second frame = earliest `GPSDateTime` + frame rate, ...)
+4. The script will embed a `DateTimeOriginal` to each frame using the first `GPSDateTime` and using the specified framerate to offset time value (e.g first frame = earliest `GPSDateTime`, second frame = earliest `GPSDateTime` + frame rate, ...)
 5. The script will embed global metadata to each frame (e.g. camera make and model)
 6. The script will geotag each frame with GPS co-ordinate (latitude, longitude, and altitude)
+
+**Note on timestamps**
+
+We use `GPSdatetime` for the time of the first frame rather than the `createDate` (or similar), because the reported `createDate` often represents the time of stitching not the time the imagery was actually captured.
+
+In cases where images are stiched on computers the `createDate` will always be much later than the time imagery was taken. When on camera stitching occurs this is less of a problem (although there might be a slight delay between capture and process on the camera).
+
+[This output shows a good example](https://gitlab.com/snippets/1979531). See all `CreateDate`'s refer to `2020:04:15 09:14:04` but first `GPSDateTime` is `2020:04:13 15:37:22.444`.
 
 ### OS Requirements
 
