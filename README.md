@@ -61,6 +61,8 @@ Telemetry data is reported as a track in a video file.
 
 [I recommend reading more about metadata tracks here](https://www.trekview.org/blog/2020/metadata-exif-xmp-360-video-files/).
 
+[We (Trek View) also maintain a repository of example video metadata tracks from popular 360 cameras](https://github.com/trek-view/360-camera-metadata).
+
 ## Quick start guide
 
 ```
