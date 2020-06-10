@@ -51,7 +51,9 @@ Works on Windows, Linux and MacOS.
 	- `GPSLatitude`
 	- `GPSLongitude`
 	- `GPSAltitude`
-	- `GPSDateTime`
+	- `GPSDateTime` OR (`GPSDateStamp` / `GPSTimeStamp`)
+
+This software will work with most video formats. Whilst it is designed for 360 vide, it will work with traditional flat (Cartesian) videos too.
 
 ## More on metadata tracks in video (for developers)
 
