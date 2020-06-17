@@ -27,11 +27,11 @@ Geovideo to Geoframes is the result.
 
 **Note on timestamps**
 
-We use `GPSdatetime` for the time of the first frame rather than the `createDate` (or similar), because the reported `createDate` often represents the time of stitching not the time the imagery was actually captured.
+We use `GPSdatetime` for the time of the first frame rather than the `originalDateTime` (or similar), because the reported `originalDateTime` often represents the time of stitching not the time the imagery was actually captured.
 
-In cases where images are stiched on computers the `createDate` will always be much later than the time imagery was taken. When on camera stitching occurs this is less of a problem (although there might be a slight delay between capture and process on the camera).
+In cases where images are stiched on computers the `originalDateTime` will always be much later than the time imagery was taken. When on camera stitching occurs this is less of a problem (although there might be a slight delay between capture and process on the camera).
 
-[This output shows a good example](https://gitlab.com/snippets/1979531). See all `CreateDate`'s refer to `2020:04:15 09:14:04` but first `GPSDateTime` is `2020:04:13 15:37:22.444`.
+[This output shows a good example](https://gitlab.com/snippets/1979531). See all `originalDateTime`'s refer to `2020:04:15 09:14:04` but first `GPSDateTime` is `2020:04:13 15:37:22.444`.
 
 ### OS Requirements
 
@@ -51,7 +51,7 @@ Works on Windows, Linux and MacOS.
 	- `GPSLatitude`
 	- `GPSLongitude`
 	- `GPSAltitude`
-	- `GPSDateTime` OR (`GPSDateStamp` / `GPSTimeStamp`)
+	- `GPSDateTime` OR (`GPSDateStamp` AND `GPSTimeStamp`) OR `originalDateTime`
 
 This software will work with most video formats. Whilst it is designed for 360 vide, it will work with traditional flat (Cartesian) videos too.
 
@@ -65,12 +65,24 @@ Telemetry data is reported as a track in a video file.
 
 ## Quick start guide
 
+### Command Line Arguments
+
+* t: time (optional: default is timegps)
+	- timegps (`GPSDateTime` of image)
+	- timecapture (`originalDateTime` of image)
+
+_A note on time. We recommend using `timegps` ([EXIF] `GPSDateTime`) not `timecapture` ([EXIF] `originalDateTime`) unless you are absolutely sure `originalDateTime` is correct. Many 360 stitching tools rewrite `originalDateTime` as datetime of stitching process not the datetime the image was actually captured. This can cause issues when sorting by time (e.g. images might not be stitched in capture order). Therefore, `GPSDateTime` is more likely to represent the true time of capture._
+
+* e: extraction type (optional: default is e)
+	- gpx (extracts gpx track and then rembeds to image. Is widely supported for most camera types, but usually offers lower resolution of GPS points which may cause video frame rate restrictions, and assumes GPS starts from video start which is not always the case if GPS signal takes some time to resolve)
+	- full (entire gps telemetry will be extracted from video. Offers a much higher resolution but only supports cameras that write telemetry in either gmpf or camm6 format. [More on telemetry standards here](https://github.com/trek-view/360-camera-metadata/tree/master/0-standards).).
+
 ```
-python gf2gv.py VIDEO_FILE FRAME_RATE OUTPUT_FRAME_DIRECTORY
+python gf2gv.py -t [TIME] -e [GPS EXTRACTION TYPE] VIDEO_FILE FRAME_RATE OUTPUT_FRAME_DIRECTORY
 ```
 
 ```
-python gf2gv.py VIDEO_0294.mp4 1 my_video_frames/
+python gf2gv.py -t timegps -e gpx VIDEO_0294.mp4 1 my_video_frames/
 ```
 
 
