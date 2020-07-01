@@ -73,16 +73,19 @@ Telemetry data is reported as a track in a video file.
 
 _A note on time. We recommend using `timegps` ([EXIF] `GPSDateTime`) not `timecapture` ([EXIF] `createDate`) unless you are absolutely sure `createDate` is correct. Many 360 stitching tools rewrite `createDate` as datetime of stitching process not the datetime the image was actually captured. This can cause issues when sorting by time (e.g. images might not be stitched in capture order). Therefore, `GPSDateTime` is more likely to represent the true time of capture._
 
-* e: extraction type (optional: default is e)
-	- gpx (extracts gpx track and then rembeds to image. Is widely supported for most camera types, but usually offers lower resolution of GPS points which may cause video frame rate restrictions, and assumes GPS starts from video start which is not always the case if GPS signal takes some time to resolve)
-	- full (entire gps telemetry will be extracted from video. Offers a much higher resolution but only supports cameras that write telemetry in either gmpf or camm6 format. [More on telemetry standards here](https://github.com/trek-view/360-camera-metadata/tree/master/0-standards).).
+* e: Exif executable path (-e)
+
+* f: FFmpeg executable path (-f)
+
+* r: frame_rates (-r)
+
 
 ```
-python gf2gv.py -t [TIME] -e [GPS EXTRACTION TYPE] VIDEO_FILE FRAME_RATE OUTPUT_FRAME_DIRECTORY
+python gf2gv.py -t [TIME] -e [EXIF EXECUTABLE PATH] -f [FFMPEG EXECUTABLE PATH] -r [FRAME_RATE] VIDEO_FILE OUTPUT_FRAME_DIRECTORY
 ```
 
 ```
-python gf2gv.py -t timegps -e gpx VIDEO_0294.mp4 1 my_video_frames/
+python gf2gv.py -t timegps -e exiftool.exe -f ffmpeg.exe -r 1 VIDEO_0294.mp4 my_video_frames/
 ```
 
 
