@@ -2,7 +2,7 @@
 
 ## In one sentence
 
-Command line Python script that 1) takes video file with GPS telemetry track, 2) extracts all video metadata, 3) splits videos into frames at user defined frame rate, and 4) re-emberd original metadata into extracted frames (including geotags).
+Command line Python script that 1) takes video file with GPS telemetry track, 2) extracts all video metadata, 3) splits videos into frames at user defined frame rate, and 4) re-embed original metadata into extracted frames (including geotags).
 
 ## Why we built this
 
@@ -20,18 +20,22 @@ Geovideo to Geoframes is the result.
 
 1. You specify the geotagged video and the framerate (frames per second) to be extracted
 2. The script will extract the metadata of the video
-3. The script will use ffmpeg to split the video into frames at specified frame rate
+3. The script will use ffmpeg to split the video into frames (`.jpg` files) at specified frame rate
 4. The script will embed a `DateTimeOriginal` to each frame using the first time and using the specified framerate to offset time value (e.g first frame = earliest time, second frame = earliest time + frame rate, ...)
-5. The script will embed global metadata to each frame (e.g. camera make and model)
-6. The script will geotag each frame with GPS co-ordinate (latitude, longitude, and altitude)
+5. The script will embed global metadata to each frame (e.g. camera make, model, projection...)
+6. The script will geotag each frame with GPS co-ordinate (time, latitude, longitude, and altitude)
 
-**Note on timestamps**
+**Note on GPS extraction**
 
-We use `GPSdatetime` for the time of the first frame rather than the `createDate` (or similar), because the reported `createDate` often represents the time of stitching not the time the imagery was actually captured.
+We use exiftool to extract a gpx file from the video. Exiftool extract a GPX file with timestamps which is then used to geotag extracted frames. [The process is described in more detail in this post](https://www.trekview.org/blog/2020/extracting-gps-track-from-360-timelapse-video/).
+The video
 
-In cases where images are stiched on computers the `createDate` will always be much later than the time imagery was taken. When on camera stitching occurs this is less of a problem (although there might be a slight delay between capture and process on the camera).
+We use this approach because exiftool understands the standards for most camera types.
 
-[This output shows a good example](https://gitlab.com/snippets/1979531). See all `createDate`'s refer to `2020:04:15 09:14:04` but first `GPSDateTime` is `2020:04:13 15:37:22.444`.
+The trade off is that:
+
+1. the GPX track outputted sometimes has a lower resolution of GPS points (sometime video has more gps points than printed in gpx output).
+2. it assumers GPS starts from video start time which is not always. For example, the video stated recording, but the gps signal is yet to lock on. If this is suspected, it is better to use `-t timecapture` when running the script (see command line arguments).
 
 ### OS Requirements
 
@@ -45,7 +49,7 @@ Works on Windows, Linux and MacOS.
 
 ### Video Requirements
 
-* Must be a video format understood by ffmpeg and exiftool
+* Must be a video format understood by ffmpeg and exiftool (`.mp4` recommended)
 * Must be [XMP] ProjectionType=equirectangular
 * Must have contain a telemetry track with GPS data
 	- `GPSLatitude`
@@ -53,40 +57,49 @@ Works on Windows, Linux and MacOS.
 	- `GPSAltitude`
 	- `GPSDateTime` OR (`GPSDateStamp` AND `GPSTimeStamp`) OR `createDate`
 
-This software will work with most video formats. Whilst it is designed for 360 vide, it will work with traditional flat (Cartesian) videos too.
-
-## More on metadata tracks in video (for developers)
-
-Telemetry data is reported as a track in a video file.
-
-[I recommend reading more about metadata tracks here](https://www.trekview.org/blog/2020/metadata-exif-xmp-360-video-files/).
-
-[We (Trek View) also maintain a repository of example video metadata tracks from popular 360 cameras](https://github.com/trek-view/360-camera-metadata).
+This software will work with most video formats. Whilst it is designed for 360 video files, it will work with traditional flat (Cartesian) videos too.
 
 ## Quick start guide
 
 ### Command Line Arguments
 
-* t: time (optional: default is timegps)
+* `-t`: time (optional: default is timegps)
 	- timegps (first `GPSDateTime` of video)
 	- timecapture (`CreateDate` of video)
+* `-r`: frame rate
+	- number of frames per second to extract from video. Must be < 1. (e.g. `-r 0.5` = 1 frame every 2 seconds).
 
-_A note on time. We recommend using `timegps` ([EXIF] `GPSDateTime`) not `timecapture` ([EXIF] `createDate`) unless you are absolutely sure `createDate` is correct. Many 360 stitching tools rewrite `createDate` as datetime of stitching process not the datetime the image was actually captured. This can cause issues when sorting by time (e.g. images might not be stitched in capture order). Therefore, `GPSDateTime` is more likely to represent the true time of capture._
+_A note on time. We recommend using `timegps` ([EXIF] `GPSDateTime`) not `timecapture` ([EXIF] `createDate`) unless you are absolutely sure `createDate` is correct. Many 360 stitching tools rewrite `createDate` as datetime of stitching process not the datetime the image was actually captured. This can cause issues when sorting by time (e.g. images might not be stitched in capture order). Therefore, `GPSDateTime` is more likely to represent the true time of capture. [This output shows a good example](https://gitlab.com/snippets/1979531). See all `createDate`'s refer to `2020:04:15 09:14:04` but first `GPSDateTime` is `2020:04:13 15:37:22.444`._
 
-* e: extraction type (optional: default is e)
-	- gpx (extracts gpx track and then rembeds to image. Is widely supported for most camera types, but usually offers lower resolution of GPS points which may cause video frame rate restrictions, and assumes GPS starts from video start which is not always the case if GPS signal takes some time to resolve)
-	- full (entire gps telemetry will be extracted from video. Offers a much higher resolution but only supports cameras that write telemetry in either gmpf or camm6 format. [More on telemetry standards here](https://github.com/trek-view/360-camera-metadata/tree/master/0-standards).).
+### Usage
+
+_Note for Windows users_
+
+It is recommended you place `exiftool.exe` and `ffmpeg.exe` in the script directory.
+
+To do this for exiftool, [download exiftool](https://exiftool.org/), extract the `.zip` file, place `exiftool(-k).exe` in script directory, and rename `exiftool(-k).exe` as `exiftool.exe`
+
+To do this for ffmpeg, [download ffmpeg](https://www.ffmpeg.org/download.html#build-windows), extract the `.zip` file, and place `ffmpeg.exe` in script directory.
+
+If you want to run an existing exiftool install from outside the directory you can also add the path to the exiftool executable on the machine using either `--exiftool-exec-path` or `-e`.
+
+If you want to run an existing ffmpeg install from outside the directory you can also add the path to the exiftool executable on the machine using either `'-f'` or `--ffmpeg-exec-path`.
+
+_Note for MacOS / Unix users_
+
+Remove the double quotes (`"`) around any directory path shown in the examples. For example `"OUTPUT_1"` becomes `OUTPUT_1`.
+
+**Using a video `"/INPUT/VIDEO_0294.mp4"` extract 1 frame per second (`-r 1`) using the first GPSDateTime value (`-t timegps`) for the first image extracted and output all `.jpg` images to the directory `"OUTPUT_1"`**
 
 ```
-python gf2gv.py -t [TIME] -e [GPS EXTRACTION TYPE] VIDEO_FILE FRAME_RATE OUTPUT_FRAME_DIRECTORY
+python gf2gv.py -t timegps -r 1 "/INPUT/VIDEO_0294.mp4" "OUTPUT_1"
 ```
 
-```
-python gf2gv.py -t timegps -e gpx VIDEO_0294.mp4 1 my_video_frames/
-```
+**Using a video `"/INPUT/VIDEO_0294.mp4"` extract 1 frame every 5 seconds (`-r 0.2`) using the CreateDate value (`-t timecapture`) for the first image extracted and output all `.jpg` images to the directory `"OUTPUT_2"`**
 
-
-TODO
+```
+python gf2gv.py -t timecapture -r 0.2 "/INPUT/VIDEO_0294.mp4" "OUTPUT_2"
+```
 
 ## Support 
 
@@ -94,4 +107,4 @@ We offer community support for all our software on our Campfire forum. [Ask a qu
 
 ## License
 
-Geovideo to Geoframes is licensed under a [GNU AGPLv3 License](https://github.com/trek-view/geovideo-to-geoframes/blob/master/LICENSE.txt).
+Geovideo to Geoframes is licensed under a [GNU AGPLv3 License](/LICENSE.txt).
