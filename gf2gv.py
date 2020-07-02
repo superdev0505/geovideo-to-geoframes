@@ -16,6 +16,7 @@ import sys
 import json
 import re
 import traceback
+import gpxpy
 
 
 def run_command(*args):
@@ -105,7 +106,10 @@ def get_video_info(exiftool_executable, input_path):
                 key = '{}:{}'.format(k, s_k)
                 val = video_info[key]
                 if s_k == 'GPSDateTime':
-                    item[s_k] = datetime.datetime.strptime(val, '%Y:%m:%d %H:%M:%S.%fZ')
+                    date_format = '%Y:%m:%d %H:%M:%S.%f'
+                    if 'Z' in val:
+                        date_format ='{0}Z'.format(date_format)
+                    item[s_k] = datetime.datetime.strptime(val, date_format)
                 elif s_k == 'SampleTime':
                     item[s_k] = get_seconds(val)
                 elif s_k in ['GPSLatitude', 'GPSLongitude']:
@@ -124,32 +128,37 @@ def get_video_info(exiftool_executable, input_path):
     return minified_video_info, df_frames
 
 
-def split_video(ffmpeg_executable, input_path, output_path, start_secs, frame_rates):
+def split_video_img(ffmpeg_executable, input_path, output_path, start_secs):
     """
     Split Video from start_secs to start_secs + frame_rates
     """
-    res = run_command(ffmpeg_executable, '-i', input_path, '-ss', str(start_secs), '-t', str(frame_rates), output_path)
+    res = run_command(ffmpeg_executable, '-ss', str(start_secs), '-i', input_path, '-vframes', '1', output_path)
     return res
 
 
 def update_splited_video_geo(exiftool_executable, file_path, start_time, frame_start, frame_end, time_mode):
     time_key = 'GPSDateTime'
-    frame_start_time = frame_start.get(time_key)
-    frame_end_time = frame_end.get(time_key)
-    if start_time == frame_start.get(time_key):
+    if frame_start and frame_end:
+        frame_start_time = frame_start.get(time_key) if frame_start else None
+        frame_end_time = frame_end.get(time_key) if frame_end else None
+        if start_time == frame_start.get(time_key):
+            geo_data = frame_start
+        elif start_time == frame_end.get(time_key):
+            geo_data = frame_end
+        else:
+            calculate_keys = ['GPSLatitude', 'GPSLongitude', 'GPSAltitude']
+            start_diff = (start_time - frame_start_time).total_seconds()
+            end_diff = (frame_end_time - start_time).total_seconds()
+            geo_data = {
+                k: frame_start.get(k) + (
+                        frame_end.get(k) - frame_start.get(k)) * start_diff / (start_diff + end_diff)
+                for k in calculate_keys
+            }
+            geo_data[time_key] = start_time
+    elif frame_start:
         geo_data = frame_start
-    elif start_time == frame_end.get(time_key):
-        geo_data = frame_end
     else:
-        calculate_keys = ['GPSLatitude', 'GPSLongitude', 'GPSAltitude']
-        start_diff = (start_time - frame_start_time).total_seconds()
-        end_diff = (frame_end_time - start_time).total_seconds()
-        geo_data = {
-            k: frame_start.get(k) + (
-                    frame_end.get(k) - frame_start.get(k)) * start_diff / (start_diff + end_diff)
-            for k in calculate_keys
-        }
-        geo_data[time_key] = start_time
+        geo_data = frame_end
 
     res = run_command(
         exiftool_executable,
@@ -163,7 +172,39 @@ def update_splited_video_geo(exiftool_executable, file_path, start_time, frame_s
         '-overwrite_original',
         file_path
     )
-    return res
+    return res, geo_data
+
+
+def get_dict_from_frame(frame, idx):
+    if len(frame.index) > 0:
+        selected_frame = frame.iloc[idx]
+        return {
+            'GPSDateTime': selected_frame.get('GPSDateTime'),
+            'GPSLatitude': selected_frame.get('GPSLatitude'),
+            'GPSLongitude': selected_frame.get('GPSLongitude'),
+            'SampleTime': selected_frame.get('SampleTime'),
+            'GPSAltitude': selected_frame.get('GPSAltitude')
+        }
+    return None
+
+
+def write_gpx_file(track_logs):
+    print('Writing gpx log to log.gpx')
+    gpx = gpxpy.gpx.GPX()
+    gpx_track = gpxpy.gpx.GPXTrack()
+    gpx.tracks.append(gpx_track)
+    gpx_segment = gpxpy.gpx.GPXTrackSegment()
+    gpx_track.segments.append(gpx_segment)
+    for log in track_logs:
+        point = gpxpy.gpx.GPXTrackPoint(
+            longitude=log.get('GPSLongitude'),
+            latitude=log.get('GPSLatitude'),
+            time=log.get('GPSDateTime')
+        )
+        gpx_segment.points.append(point)
+
+    with open('log.gpx', 'w') as f:
+        f.write(gpx.to_xml())
 
 
 def goevideo_to_geoframes(exiftool_executable, ffmpeg_executable, video_info, df_frames, input_path, output_directory, frame_rates, time_mode):
@@ -172,37 +213,48 @@ def goevideo_to_geoframes(exiftool_executable, ffmpeg_executable, video_info, df
     period_start = None
     period_end = None
     time_key = 'SampleTime'
-    start_time = df_frames['GPSDateTime'].iloc[0]
+    track_logs = []
+    try:
+        start_time = df_frames['GPSDateTime'].iloc[0] \
+            if time_mode == 'timegps' \
+            else datetime.datetime.strptime(video_info.get('Main:CreateDate'), '%Y:%m:%d %H:%M:%S')
+    except:
+        input('Your time mode is timecapture. But CreateDate is not set')
+        exit()
+        return
 
     while True:
-        output_path = os.path.join(output_directory, '{}.{}'.format(
-            datetime.datetime.now().strftime('%Y_%m_%d_%H%M%S%f'), video_info.get('Main:FileTypeExtension')))
+        output_path = os.path.join(output_directory, '{}.jpg'.format(
+            (start_time + datetime.timedelta(0, start_secs)).strftime('%Y_%m_%d_%H%M%S')))
 
-        print('Start spliting video from {} seconds. Path to file is {}'.format(start_secs, output_path))
-        res = split_video(ffmpeg_executable, input_path, output_path, start_secs, frame_rates)
-        print('End spliting video to {} seconds. '.format(start_secs + frame_rates))
+        ffmpeg_res = split_video_img(ffmpeg_executable, input_path, output_path, start_secs)
+        print('Got image from video at {} seconds. Path to file is {}'.format(start_secs, output_path))
 
         if not period_start or period_start.get(time_key) > start_secs:
             start_frame = df_frames[df_frames[time_key] <= start_secs]
-            period_start = start_frame.iloc[len(start_frame.index) - 1] if len(start_frame.index) > 0 else None
+            period_start = get_dict_from_frame(start_frame, len(start_frame.index) - 1)
 
         if not period_end or period_end.get(time_key) < start_secs:
             end_frame = df_frames[df_frames[time_key] > start_secs]
-            period_end = end_frame.iloc[0] if len(end_frame.index) > 0 else None
+            period_end = get_dict_from_frame(end_frame, 0)
 
         print('Start to set the metadata of {}'.format(output_path))
-        update_splited_video_geo(exiftool_executable, output_path, start_time + datetime.timedelta(0, start_secs),
+        exif_res, geo_data = update_splited_video_geo(exiftool_executable, output_path, start_time + datetime.timedelta(0, start_secs),
                                  period_start, period_end, time_mode)
+        track_logs.append(geo_data)
         print('End to set the metadata of {}'.format(output_path))
 
         if start_secs > duration_secs:
             break
         start_secs += frame_rates
 
+    write_gpx_file(track_logs)
+
 
 def main_process(args):
     path = Path(__file__)
     time_mode = args.time.lower()
+    frame_rate = 0
 
     if time_mode not in ['timegps', 'timecapture']:
         input("""Time mode should be one of "timegps", "timecapture". \n\nPress any key to quit...""")

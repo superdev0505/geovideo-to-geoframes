@@ -42,6 +42,8 @@ Works on Windows, Linux and MacOS.
 * Python version 3.6+
 * [exiftool](https://exiftool.org/)
 * [ffmpeg](https://www.ffmpeg.org/download.html)
+* [Gpxpy](https://pypi.org/project/gpxpy/): python -m pip install gpxpy
+* [Pandas](https://pandas.pydata.org/docs/): python -m pip install pandas
 
 ### Video Requirements
 
