@@ -262,6 +262,9 @@ def main_process(args):
 
     try:
         frame_rate = 1 / float(args.frame_rate)
+        if frame_rate > 1:
+            input("""Frame Rate should less than 1. \n\nPress any key to quit...""")
+            quit()
     except:
         input("""Frame Rate is required and should be number. \n\nPress any key to quit...""")
         quit()
@@ -343,7 +346,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-r', '--frame-rate',
                         action='store',
-                        help='Path to input video.')
+                        help='Frame rates it should be less than 1')
 
     parser.add_argument('output_directory',
                         action="store",
