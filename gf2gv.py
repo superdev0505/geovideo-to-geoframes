@@ -117,7 +117,7 @@ def get_video_info(exiftool_executable, input_path):
                 else:
                     item[s_k] = get_altitude_meters(val)
 
-                data_list.append(item)
+            data_list.append(item)
         except:
             continue
 
@@ -170,6 +170,17 @@ def update_splited_video_geo(exiftool_executable, file_path, start_time, frame_s
         '-GPSLongitude={}'.format(geo_data.get('GPSLongitude')),
         '-GPSAltitude={}'.format(geo_data.get('GPSAltitude')),
         '-ProjectionType={}'.format(video_info.get('Main:ProjectionType')),
+        '-Make={}'.format(video_info.get('Main:Make'), ''),
+        '-Model={}'.format(video_info.get('Main:Model'), ''),
+        '-ImageWidth={}'.format(video_info.get('Main:ImageWidth')),
+        '-ImageHeight={}'.format(video_info.get('Main:ImageHeight')),
+        '-ImageSize={}'.format(video_info.get('Main:ImageSize')),
+        '-UsePanoramaViewer=true',
+        '-CroppedAreaImageHeightPixels={}'.format(video_info.get('Main:ImageHeight')),
+        '-CroppedAreaImageWidthPixels={}'.format(video_info.get('Main:ImageWidth')),
+        '-CroppedAreaImageWidthPixels={}'.format(video_info.get('Main:ImageWidth')),
+        '-FullPanoHeightPixels={}'.format(video_info.get('Main:ImageHeight')),
+        '-FullPanoWidthPixels={}'.format(video_info.get('Main:ImageWidth')),
         '-overwrite_original',
         file_path
     )
