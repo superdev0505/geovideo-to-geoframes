@@ -136,7 +136,7 @@ def split_video_img(ffmpeg_executable, input_path, output_path, start_secs):
     return res
 
 
-def update_splited_video_geo(exiftool_executable, file_path, start_time, frame_start, frame_end, time_mode):
+def update_splited_video_geo(exiftool_executable, file_path, start_time, frame_start, frame_end, video_info):
     time_key = 'GPSDateTime'
     if frame_start and frame_end:
         frame_start_time = frame_start.get(time_key) if frame_start else None
@@ -169,6 +169,7 @@ def update_splited_video_geo(exiftool_executable, file_path, start_time, frame_s
         '-GPSLatitude={}'.format(geo_data.get('GPSLatitude')),
         '-GPSLongitude={}'.format(geo_data.get('GPSLongitude')),
         '-GPSAltitude={}'.format(geo_data.get('GPSAltitude')),
+        '-ProjectionType={}'.format(video_info.get('Main:ProjectionType')),
         '-overwrite_original',
         file_path
     )
@@ -240,7 +241,7 @@ def goevideo_to_geoframes(exiftool_executable, ffmpeg_executable, video_info, df
 
         print('Start to set the metadata of {}'.format(output_path))
         exif_res, geo_data = update_splited_video_geo(exiftool_executable, output_path, start_time + datetime.timedelta(0, start_secs),
-                                 period_start, period_end, time_mode)
+                                 period_start, period_end, video_info)
         track_logs.append(geo_data)
         print('End to set the metadata of {}'.format(output_path))
 
@@ -262,7 +263,7 @@ def main_process(args):
 
     try:
         frame_rate = 1 / float(args.frame_rate)
-        if frame_rate > 1:
+        if frame_rate < 1:
             input("""Frame Rate should less than 1. \n\nPress any key to quit...""")
             quit()
     except:
@@ -318,6 +319,9 @@ def main_process(args):
 
     goevideo_to_geoframes(exiftool_executable, ffmpeg_executable, video_info, df_frames,
                           input_path, output_path, frame_rate, time_mode)
+
+    input("""Successfully finished. \n\nPress any key to quit...""")
+    quit()
 
 
 if __name__ == '__main__':
