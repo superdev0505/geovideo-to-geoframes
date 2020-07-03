@@ -261,7 +261,7 @@ def main_process(args):
         quit()
 
     try:
-        frame_rate = int(args.frame_rate)
+        frame_rate = 1 / float(args.frame_rate)
     except:
         input("""Frame Rate is required and should be number. \n\nPress any key to quit...""")
         quit()

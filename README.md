@@ -107,7 +107,7 @@ python gf2gv.py -t [TIME] -e [EXIF EXECUTABLE PATH] -f [FFMPEG EXECUTABLE PATH] 
 
 ```
 python gf2gv.py -t timegps -e exiftool.exe -f ffmpeg.exe -r 1 VIDEO_0294.mp4 my_video_frames/
-
+```
 
 **Using a video `"/INPUT/VIDEO_0294.mp4"` extract 1 frame every 5 seconds (`-r 0.2`) using the CreateDate value (`-t timecapture`) for the first image extracted and output all `.jpg` images to the directory `"OUTPUT_2"`**
 
